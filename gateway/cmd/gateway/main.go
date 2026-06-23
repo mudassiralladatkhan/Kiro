@@ -62,10 +62,15 @@ func run() error {
 
 	log.Info().Str("version", version).Msg("Kiro Gateway starting")
 
-	// 3. Initialize auth manager.
-	authMgr, err := auth.NewAuthManager(cfg)
-	if err != nil {
-		return fmt.Errorf("auth: %w", err)
+	// 3. Initialize auth manager (skipped in ACP mode).
+	var authMgr auth.AuthManager
+	if cfg.BackendMode != "acp" {
+		authMgr, err = auth.NewAuthManager(cfg)
+		if err != nil {
+			return fmt.Errorf("auth: %w", err)
+		}
+	} else {
+		authMgr = &noopAuthManager{region: cfg.Region}
 	}
 
 	// 4. Initialize model cache and load models from Kiro API.
@@ -352,3 +357,15 @@ func startWithGracefulShutdown(srv *server.Server, cfg *config.Config) error {
 
 	return nil
 }
+
+// noopAuthManager satisfies auth.AuthManager for ACP mode where credentials
+// are managed by kiro-cli, not the gateway.
+type noopAuthManager struct{ region string }
+
+func (n *noopAuthManager) GetAccessToken(_ context.Context) (string, error) { return "", nil }
+func (n *noopAuthManager) ForceRefresh(_ context.Context) error             { return nil }
+func (n *noopAuthManager) AuthType() auth.AuthType                          { return auth.AuthTypeKiroDesktop }
+func (n *noopAuthManager) ProfileARN() string                               { return "" }
+func (n *noopAuthManager) Fingerprint() string                              { return "acp-noop" }
+func (n *noopAuthManager) APIHost() string                                  { return fmt.Sprintf("https://kiro.%s.api.aws", n.region) }
+func (n *noopAuthManager) QHost() string                                    { return fmt.Sprintf("https://q.%s.api.aws", n.region) }
