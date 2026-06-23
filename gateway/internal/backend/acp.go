@@ -53,7 +53,7 @@ func NewACPBackend(cfg *config.Config) (*ACPBackend, error) {
 		return nil, err
 	}
 
-	args := []string{"acp"}
+	args := []string{"acp", "-a"}
 	if cfg.ACPAgent != "" {
 		args = append(args, "--agent", cfg.ACPAgent)
 	}
@@ -244,6 +244,8 @@ func (b *ACPBackend) initialize() error {
 	defer cancel()
 
 	params := map[string]any{
+		"protocolVersion": "2025-03-26",
+		"capabilities":    map[string]any{},
 		"clientInfo": map[string]any{
 			"name":    "go-kiro-gateway",
 			"version": "1.0",
@@ -254,7 +256,8 @@ func (b *ACPBackend) initialize() error {
 }
 
 func (b *ACPBackend) sessionNew(ctx context.Context) (string, error) {
-	result, err := b.call(ctx, "session/new", map[string]any{})
+	cwd, _ := os.Getwd()
+	result, err := b.call(ctx, "session/new", map[string]any{"cwd": cwd})
 	if err != nil {
 		return "", err
 	}
