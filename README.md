@@ -2,12 +2,14 @@
 
 **An API gateway proxy for the AWS Kiro Service (Amazon Q Developer / AWS CodeWhisperer)**
 
+<img width="704" alt="go-kiro-gateway-repo-image" src="https://github.com/user-attachments/assets/01380e04-345e-4fc9-b2c4-ec371d01896b" />
+
 [![Release](https://img.shields.io/github/v/release/chasedputnam/go-kiro-gateway)](https://github.com/chasedputnam/go-kiro-gateway/releases/latest)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Go 1.25+](https://img.shields.io/badge/Go-1.25+-00ADD8.svg)](https://go.dev/dl/)
 [![chi](https://img.shields.io/badge/chi-v5-00ADD8.svg)](https://github.com/go-chi/chi)
 
-*Use Claude models from Kiro with Claude Code, OpenCode, Codex app, Cursor, Cline, Roo Code, Kilo Code, Obsidian, OpenAI SDK, LangChain, and any other OpenAI or Anthropic compatible tools and services.*
+*Use LLM models from Kiro with Claude Code, OpenCode, Codex app, Cursor, Pi, Crush, Obsidian, OpenAI SDK, LangChain, and any other OpenAI or Anthropic compatible tools and services.*
 
 [Models](#-supported-models) • [Features](#-features) • [Quick Start](#-quick-start) • [Configuration](#-configuration) • [ACP Mode](#-acp-mode-kiro-cli-backend)
 
