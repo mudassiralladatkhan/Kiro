@@ -37,8 +37,8 @@ RUN CGO_ENABLED=0 GOOS=linux \
 # ---------------------------------------------------------------------------
 FROM alpine:3.23
 
-# Install CA certificates and curl for health checks.
-RUN apk add --no-cache ca-certificates curl
+# Install CA certificates, curl for health checks, and poppler-utils for PDF rendering.
+RUN apk add --no-cache ca-certificates curl poppler-utils
 
 # Create non-root user.
 RUN addgroup -S kiro && adduser -S -G kiro kiro

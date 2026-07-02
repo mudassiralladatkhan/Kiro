@@ -49,3 +49,22 @@ func TestConvertAnthropicContentToText_Unsupported(t *testing.T) {
 		t.Fatalf("expected unsupported type warning in extracted text, got: %s", extracted)
 	}
 }
+
+func TestContainsVisualKeywords(t *testing.T) {
+	tests := []struct {
+		input    any
+		expected bool
+	}{
+		{"Look at the style of this PDF", true},
+		{"Tell me if the design looks good", true},
+		{"What does this say?", false},
+		{[]any{map[string]any{"type": "text", "text": "Analyze the visual elements"}}, true},
+		{[]any{map[string]any{"type": "text", "text": "Just summarize the text"}}, false},
+	}
+	for _, tt := range tests {
+		result := containsVisualKeywords(tt.input)
+		if result != tt.expected {
+			t.Errorf("containsVisualKeywords(%v) = %v; expected %v", tt.input, result, tt.expected)
+		}
+	}
+}

@@ -105,6 +105,51 @@ func extractSystemPrompt(system any) string {
 // Message conversion
 // ---------------------------------------------------------------------------
 
+// convertAnthropicContentToTextOnly extracts text blocks from content while
+// strictly ignoring document, image, or other block types.
+func convertAnthropicContentToTextOnly(content any) string {
+	if content == nil {
+		return ""
+	}
+	if s, ok := content.(string); ok {
+		return s
+	}
+	if blocks, ok := content.([]any); ok {
+		var parts []string
+		for _, item := range blocks {
+			block, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			if stringVal(block, "type") == "text" {
+				if text, ok := block["text"].(string); ok {
+					parts = append(parts, text)
+				}
+			}
+		}
+		return strings.Join(parts, "")
+	}
+	return ""
+}
+
+// containsVisualKeywords checks if the user's message contains words
+// suggesting they want to inspect document styling, layout, fonts, or images.
+func containsVisualKeywords(content any) bool {
+	text := convertAnthropicContentToTextOnly(content)
+	text = strings.ToLower(text)
+	keywords := []string{
+		"style", "font", "format", "design", "look", "visual", "image",
+		"color", "layout", "see", "view", "picture", "appear", "render",
+		"pdf-to-image", "pdf2image", "show", "ui", "aesthetic", "graphic",
+	}
+	for _, kw := range keywords {
+		if strings.Contains(text, kw) {
+			return true
+		}
+	}
+	return false
+}
+
 // convertAnthropicMessages converts Anthropic messages to unified format.
 //
 // It handles:
@@ -112,6 +157,7 @@ func extractSystemPrompt(system any) string {
 //   - Tool use blocks (assistant messages)
 //   - Tool result blocks (user messages)
 //   - Images in user messages (top-level and inside tool_result blocks)
+//   - PDF document rendering to visual images if user explicitly requests visual analysis
 func convertAnthropicMessages(messages []models.AnthropicMessage) []UnifiedMessage {
 	var (
 		unified        []UnifiedMessage
@@ -121,7 +167,89 @@ func convertAnthropicMessages(messages []models.AnthropicMessage) []UnifiedMessa
 	)
 
 	for _, msg := range messages {
-		textContent := convertAnthropicContentToText(msg.Content)
+		var textContent string
+		var pdfImages []UnifiedImage
+
+		// Determine if user wants visual analysis of documents
+		wantsVisual := false
+		if msg.Role == "user" {
+			wantsVisual = containsVisualKeywords(msg.Content)
+		}
+
+		// Parse/convert the content blocks
+		if blocks, ok := msg.Content.([]any); ok {
+			var parts []string
+			for _, item := range blocks {
+				block, ok := item.(map[string]any)
+				if !ok {
+					continue
+				}
+				blockType := stringVal(block, "type")
+				if blockType == "text" {
+					if text, ok := block["text"].(string); ok {
+						parts = append(parts, text)
+					}
+				} else if blockType == "document" {
+					// Parse document block:
+					// {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": "..."}}
+					source, ok := block["source"].(map[string]any)
+					if ok && stringVal(source, "type") == "base64" {
+						mediaType := stringVal(source, "media_type")
+						dataStr, _ := source["data"].(string)
+						docName := stringVal(block, "title")
+						if docName == "" {
+							docName = stringVal(block, "name")
+						}
+						if docName == "" {
+							docName = "document"
+						}
+
+						if mediaType == "application/pdf" {
+							success := false
+							if wantsVisual {
+								log.Info().Str("name", docName).Msg("User requested visual analysis. Attempting to render PDF to images.")
+								base64PNGs, err := renderPDFToPNGs(dataStr, 5)
+								if err == nil {
+									for _, pngData := range base64PNGs {
+										pdfImages = append(pdfImages, UnifiedImage{
+											MediaType: "image/png",
+											Data:      pngData,
+										})
+									}
+									parts = append(parts, fmt.Sprintf("\n\n[Uploaded PDF Document: %s (Rendered visually as images below)]\n\n", docName))
+									success = true
+								} else {
+									log.Warn().Err(err).Msg("PDF visual rendering failed, falling back to text extraction")
+								}
+							}
+
+							if !success {
+								log.Info().Str("name", docName).Msg("Extracting text from uploaded PDF document")
+								pdfText, err := extractTextFromPDFBase64(dataStr)
+								if err != nil {
+									log.Error().Err(err).Str("name", docName).Msg("Failed to extract PDF text")
+									parts = append(parts, fmt.Sprintf("\n\n[Error reading document %s: %v]\n\n", docName, err))
+								} else {
+									parts = append(parts, fmt.Sprintf("\n\n[Uploaded PDF Document Content: %s]\n%s\n[End of Uploaded Document: %s]\n\n", docName, pdfText, docName))
+								}
+							}
+						} else if strings.HasPrefix(mediaType, "text/") || mediaType == "application/json" {
+							decodedBytes, err := base64.StdEncoding.DecodeString(dataStr)
+							if err != nil {
+								parts = append(parts, fmt.Sprintf("\n\n[Error decoding document %s: %v]\n\n", docName, err))
+							} else {
+								parts = append(parts, fmt.Sprintf("\n\n[Uploaded Document Content: %s]\n%s\n[End of Uploaded Document: %s]\n\n", docName, string(decodedBytes), docName))
+							}
+						} else {
+							parts = append(parts, fmt.Sprintf("\n\n[Unsupported document type %s for %s]\n\n", mediaType, docName))
+						}
+					}
+				}
+			}
+			textContent = strings.Join(parts, "")
+		} else {
+			textContent = convertAnthropicContentToText(msg.Content)
+		}
 
 		um := UnifiedMessage{
 			Role:    msg.Role,
@@ -145,6 +273,11 @@ func convertAnthropicMessages(messages []models.AnthropicMessage) []UnifiedMessa
 
 			// Extract images from user message content (top-level).
 			images := extractImagesFromContent(msg.Content)
+
+			// Add visual PDF pages if extracted
+			if len(pdfImages) > 0 {
+				images = append(images, pdfImages...)
+			}
 
 			// Also extract images from inside tool_result content blocks
 			// (e.g. screenshots returned by browser MCP tools).
