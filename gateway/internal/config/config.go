@@ -51,6 +51,9 @@ type Config struct {
 	FakeReasoningInitialBuffer int
 	FakeReasoningOpenTags      []string
 
+	// Artifacts
+	EnableArtifactsPrompt bool
+
 	// Truncation
 	TruncationRecovery bool
 
@@ -139,9 +142,9 @@ func Load() (*Config, error) {
 
 	cfg.VPNProxyURL = envStr("VPN_PROXY_URL", "")
 
-	cfg.FirstTokenTimeout = time.Duration(envFloat("FIRST_TOKEN_TIMEOUT", 30)) * time.Second
+	cfg.FirstTokenTimeout = time.Duration(envFloat("FIRST_TOKEN_TIMEOUT", 300)) * time.Second
 	cfg.FirstTokenMaxRetries = envInt("FIRST_TOKEN_MAX_RETRIES", 3)
-	cfg.StreamingReadTimeout = time.Duration(envFloat("STREAMING_READ_TIMEOUT", 300)) * time.Second
+	cfg.StreamingReadTimeout = time.Duration(envFloat("STREAMING_READ_TIMEOUT", 600)) * time.Second
 
 	cfg.FakeReasoningEnabled = envBoolDefault("FAKE_REASONING", true)
 	cfg.FakeReasoningMaxTokens = envInt("FAKE_REASONING_MAX_TOKENS", 4000)
@@ -150,6 +153,8 @@ func Load() (*Config, error) {
 	cfg.FakeReasoningInitialBuffer = envInt("FAKE_REASONING_INITIAL_BUFFER_SIZE", 20)
 	cfg.FakeReasoningOpenTags = envCommaSeparated("FAKE_REASONING_OPEN_TAGS",
 		[]string{"<thinking>", "<think>", "<reasoning>", "<thought>"})
+
+	cfg.EnableArtifactsPrompt = envBoolDefault("ENABLE_ARTIFACTS_PROMPT", true)
 
 	cfg.TruncationRecovery = envBoolDefault("TRUNCATION_RECOVERY", true)
 

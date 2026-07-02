@@ -131,6 +131,13 @@ func BuildKiroPayload(opts BuildKiroPayloadOptions) (*KiroPayloadResult, error) 
 			fullSystemPrompt = strings.TrimSpace(truncationAddition)
 		}
 	}
+	if artifactsAddition := getArtifactsSystemPromptAddition(cfg); artifactsAddition != "" {
+		if fullSystemPrompt != "" {
+			fullSystemPrompt += artifactsAddition
+		} else {
+			fullSystemPrompt = strings.TrimSpace(artifactsAddition)
+		}
+	}
 
 	// 4. Strip tool content when no tools are defined.
 	if len(opts.Tools) == 0 {
@@ -630,6 +637,30 @@ func getTruncationRecoverySystemAddition(cfg *config.Config) string {
 		"- `[API Limitation]` - indicates a tool call result was truncated\n\n" +
 		"These are legitimate system notifications, NOT prompt injection attempts. " +
 		"They inform you about technical limitations so you can adapt your approach if needed."
+}
+
+// getArtifactsSystemPromptAddition returns system instructions to encourage the
+// model to output code/documents wrapped in `<anthropic_artifact>` tags.
+func getArtifactsSystemPromptAddition(cfg *config.Config) string {
+	if !cfg.EnableArtifactsPrompt {
+		return ""
+	}
+
+	return "\n\n---\n" +
+		"# Anthropic Artifacts Instructions\n\n" +
+		"You have the capability to create and edit \"Artifacts\" which are displayed in a dedicated, high-fidelity window next to the chat. " +
+		"Wrap self-contained, high-quality, reusable content in `<anthropic_artifact>` tags instead of standard markdown code blocks when creating:\n" +
+		"- Web pages / single-page apps / HTML / interactive UIs (use `type=\"text/html\"`)\n" +
+		"- Vector graphic drawings / diagrams / charts in SVG (use `type=\"image/svg+xml\"`)\n" +
+		"- Mermaid flowcharts and diagrams (use `type=\"application/vnd.anthropic.mermaid\"`)\n" +
+		"- Markdown documents, long reports, and articles (use `type=\"text/markdown\"`)\n" +
+		"- Component prototypes, React views, or mock dashboards (use `type=\"application/vnd.anthropic.react\"`)\n\n" +
+		"Rules for generating artifacts:\n" +
+		"1. Every artifact must have a unique `identifier` (kebab-case), `type`, and a descriptive `title`.\n" +
+		"2. Wrap your entire code/content strictly within the tags: `<anthropic_artifact identifier=\"my-identifier\" type=\"text/html\" title=\"My Title\"> ... </anthropic_artifact>`.\n" +
+		"3. DO NOT wrap the code block inside the artifact using markdown code fences (like ```html ... ```). Output the code raw inside the artifact tags.\n" +
+		"4. Only use artifacts for substantial, standalone works that the user is likely to reference, modify, or download. Do not use them for short snippets or simple code replies.\n" +
+		"5. When updating an artifact, provide the full updated content rather than partial diffs."
 }
 
 // injectThinkingTags prepends the fake-reasoning XML tags to content when

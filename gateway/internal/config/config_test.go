@@ -109,14 +109,14 @@ func TestLoad_DefaultValues(t *testing.T) {
 	}
 
 	// Timeout defaults
-	if cfg.FirstTokenTimeout != 30*time.Second {
-		t.Errorf("FirstTokenTimeout = %v, want 30s", cfg.FirstTokenTimeout)
+	if cfg.FirstTokenTimeout != 300*time.Second {
+		t.Errorf("FirstTokenTimeout = %v, want 300s", cfg.FirstTokenTimeout)
 	}
 	if cfg.FirstTokenMaxRetries != 3 {
 		t.Errorf("FirstTokenMaxRetries = %d, want 3", cfg.FirstTokenMaxRetries)
 	}
-	if cfg.StreamingReadTimeout != 300*time.Second {
-		t.Errorf("StreamingReadTimeout = %v, want 300s", cfg.StreamingReadTimeout)
+	if cfg.StreamingReadTimeout != 600*time.Second {
+		t.Errorf("StreamingReadTimeout = %v, want 600s", cfg.StreamingReadTimeout)
 	}
 
 	// Fake reasoning defaults
