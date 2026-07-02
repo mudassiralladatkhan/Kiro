@@ -130,6 +130,11 @@ func (s *Server) handleChatCompletions(w http.ResponseWriter, r *http.Request) {
 	// Resolve model name.
 	resolution := s.resolver.Resolve(req.Model)
 	modelID := resolution.InternalID
+	log.Info().
+		Str("original_model", req.Model).
+		Str("resolved_model", modelID).
+		Str("source", resolution.Source).
+		Msg("Resolved model name for Kiro")
 
 	// Truncation recovery: check for truncated tool results and content.
 	if s.config.TruncationRecovery {
