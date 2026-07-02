@@ -9,7 +9,9 @@
 package converter
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/chasedputnam/go-kiro-gateway/gateway/internal/config"
@@ -195,9 +197,45 @@ func convertAnthropicContentToText(content any) string {
 			if !ok {
 				continue
 			}
-			if stringVal(block, "type") == "text" {
+			blockType := stringVal(block, "type")
+			if blockType == "text" {
 				if text, ok := block["text"].(string); ok {
 					parts = append(parts, text)
+				}
+			} else if blockType == "document" {
+				// Parse document block:
+				// {"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": "..."}}
+				source, ok := block["source"].(map[string]any)
+				if ok && stringVal(source, "type") == "base64" {
+					mediaType := stringVal(source, "media_type")
+					dataStr, _ := source["data"].(string)
+					docName := stringVal(block, "title")
+					if docName == "" {
+						docName = stringVal(block, "name")
+					}
+					if docName == "" {
+						docName = "document"
+					}
+
+					if mediaType == "application/pdf" {
+						log.Info().Str("name", docName).Msg("Extracting text from uploaded PDF document")
+						pdfText, err := extractTextFromPDFBase64(dataStr)
+						if err != nil {
+							log.Error().Err(err).Str("name", docName).Msg("Failed to extract PDF text")
+							parts = append(parts, fmt.Sprintf("\n\n[Error reading document %s: %v]\n\n", docName, err))
+						} else {
+							parts = append(parts, fmt.Sprintf("\n\n[Uploaded PDF Document Content: %s]\n%s\n[End of Uploaded Document: %s]\n\n", docName, pdfText, docName))
+						}
+					} else if strings.HasPrefix(mediaType, "text/") || mediaType == "application/json" {
+						decodedBytes, err := base64.StdEncoding.DecodeString(dataStr)
+						if err != nil {
+							parts = append(parts, fmt.Sprintf("\n\n[Error decoding document %s: %v]\n\n", docName, err))
+						} else {
+							parts = append(parts, fmt.Sprintf("\n\n[Uploaded Document Content: %s]\n%s\n[End of Uploaded Document: %s]\n\n", docName, string(decodedBytes), docName))
+						}
+					} else {
+						parts = append(parts, fmt.Sprintf("\n\n[Unsupported document type %s for %s]\n\n", mediaType, docName))
+					}
 				}
 			}
 		}
