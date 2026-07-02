@@ -161,6 +161,14 @@ func NormalizeModelName(name string) string {
 
 	lower := strings.ToLower(name)
 
+	// Upstream Backend Rewrite Rule: Normalize requested models to an officially
+	// supported AWS Bedrock identifier: claude-3-5-sonnet.
+	if lower == "claude-sonnet-4-5" || lower == "claude-sonnet-4.5" ||
+		lower == "claude-4-5-sonnet" || lower == "claude-4.5-sonnet" ||
+		lower == "claude-opus-4-8" || lower == "claude-opus-4.8" {
+		return "claude-3-5-sonnet"
+	}
+
 	// Pattern 1: Standard format — claude-{family}-{major}-{minor}(-{suffix})?
 	if m := standardPattern.FindStringSubmatch(lower); m != nil {
 		// m[1] = "claude-haiku-4", m[2] = "5"
@@ -226,22 +234,43 @@ func (r *modelResolver) Resolve(externalModel string) ModelResolution {
 	// Layer 1: Normalize name.
 	normalized := NormalizeModelName(resolved)
 
-	// Layer 2: Check dynamic cache.
-	if r.cache.IsValidModel(normalized) {
+	// Layer 2: Check hidden models and cache interaction.
+	if internalID, ok := r.hiddenModels[normalized]; ok {
+		// If the mapped internal ID is actually supported by the dynamic cache, use it.
+		if r.cache.IsValidModel(internalID) {
+			return ModelResolution{
+				InternalID:      internalID,
+				Source:          "hidden",
+				OriginalRequest: externalModel,
+				Normalized:      normalized,
+				IsVerified:      true,
+			}
+		}
+		// If the mapped internal ID is not cached, but the normalized name itself is, cache wins.
+		if r.cache.IsValidModel(normalized) {
+			return ModelResolution{
+				InternalID:      normalized,
+				Source:          "cache",
+				OriginalRequest: externalModel,
+				Normalized:      normalized,
+				IsVerified:      true,
+			}
+		}
+		// Otherwise, fall back to the hidden model mapping.
 		return ModelResolution{
-			InternalID:      normalized,
-			Source:          "cache",
+			InternalID:      internalID,
+			Source:          "hidden",
 			OriginalRequest: externalModel,
 			Normalized:      normalized,
 			IsVerified:      true,
 		}
 	}
 
-	// Layer 3: Check hidden models.
-	if internalID, ok := r.hiddenModels[normalized]; ok {
+	// Layer 3: Check dynamic cache.
+	if r.cache.IsValidModel(normalized) {
 		return ModelResolution{
-			InternalID:      internalID,
-			Source:          "hidden",
+			InternalID:      normalized,
+			Source:          "cache",
 			OriginalRequest: externalModel,
 			Normalized:      normalized,
 			IsVerified:      true,

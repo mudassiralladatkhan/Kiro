@@ -32,12 +32,40 @@ import (
 // GET /v1/models
 // ---------------------------------------------------------------------------
 
-// handleListModels returns the list of available models in OpenAI format.
-func (s *Server) handleListModels(w http.ResponseWriter, _ *http.Request) {
+// handleListModels returns the list of available models in OpenAI or Anthropic format.
+func (s *Server) handleListModels(w http.ResponseWriter, r *http.Request) {
 	log.Info().Msg("Request to /v1/models")
 
 	modelIDs := s.resolver.GetAvailableModels()
 
+	// Check if this is an Anthropic client request.
+	isAnthropic := r.Header.Get("anthropic-version") != "" || r.Header.Get("x-api-key") != ""
+
+	if isAnthropic {
+		data := make([]map[string]any, 0, len(modelIDs))
+		for _, id := range modelIDs {
+			displayName := id
+			if id == "claude-opus-4-8" || id == "claude-opus-4.8" {
+				displayName = "Claude 3.5 Opus"
+			} else if id == "claude-sonnet-4-5" || id == "claude-sonnet-4.5" {
+				displayName = "Claude 3.5 Sonnet"
+			}
+
+			data = append(data, map[string]any{
+				"type":         "model",
+				"id":           id,
+				"display_name": displayName,
+				"created_at":   time.Now().Format(time.RFC3339),
+			})
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"data":     data,
+			"has_more": false,
+		})
+		return
+	}
+
+	// OpenAI format
 	data := make([]map[string]any, 0, len(modelIDs))
 	for _, id := range modelIDs {
 		data = append(data, map[string]any{

@@ -25,3 +25,7 @@ requests/
 # Testing
 build/
 go-kiro-gateway
+
+# Sensitive credentials
+creds.json
+gateway/creds.json

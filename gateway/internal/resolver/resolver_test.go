@@ -39,8 +39,30 @@ func TestNormalizeModelName_StandardWithMinor(t *testing.T) {
 		expected string
 	}{
 		{"claude-haiku-4-5", "claude-haiku-4.5"},
-		{"claude-sonnet-4-5", "claude-sonnet-4.5"},
+		{"claude-sonnet-4-5", "claude-3-5-sonnet"},
 		{"claude-opus-4-5", "claude-opus-4.5"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			got := NormalizeModelName(tt.input)
+			if got != tt.expected {
+				t.Errorf("NormalizeModelName(%q) = %q, want %q", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestNormalizeModelName_UpstreamRewrite(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"claude-sonnet-4-5", "claude-3-5-sonnet"},
+		{"claude-sonnet-4.5", "claude-3-5-sonnet"},
+		{"claude-4-5-sonnet", "claude-3-5-sonnet"},
+		{"claude-4.5-sonnet", "claude-3-5-sonnet"},
+		{"claude-opus-4-8", "claude-3-5-sonnet"},
+		{"claude-opus-4.8", "claude-3-5-sonnet"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -151,7 +173,7 @@ func TestNormalizeModelName_InvertedRequiresSuffix(t *testing.T) {
 		expected string
 	}{
 		{"claude-3.7-sonnet", "claude-3.7-sonnet"},
-		{"claude-4.5-sonnet", "claude-4.5-sonnet"},
+		{"claude-4.7-sonnet", "claude-4.7-sonnet"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
@@ -176,7 +198,7 @@ func TestNormalizeModelName_AlreadyNormalized(t *testing.T) {
 		expected string
 	}{
 		{"claude-haiku-4.5", "claude-haiku-4.5"},
-		{"claude-sonnet-4.5", "claude-sonnet-4.5"},
+		{"claude-sonnet-4.5", "claude-3-5-sonnet"},
 		{"claude-opus-4.5", "claude-opus-4.5"},
 		{"claude-3.7-sonnet", "claude-3.7-sonnet"},
 	}
@@ -579,7 +601,7 @@ func TestNormalizeModelName_Comprehensive(t *testing.T) {
 		{"claude-haiku-4-5", "claude-haiku-4.5"},
 		{"claude-haiku-4-5-20251001", "claude-haiku-4.5"},
 		{"claude-haiku-4-5-latest", "claude-haiku-4.5"},
-		{"claude-sonnet-4-5", "claude-sonnet-4.5"},
+		{"claude-sonnet-4-5", "claude-3-5-sonnet"},
 		{"claude-sonnet-4-5-20250929", "claude-sonnet-4.5"},
 		{"claude-opus-4-5", "claude-opus-4.5"},
 		{"claude-opus-4-5-20251101", "claude-opus-4.5"},
@@ -595,7 +617,7 @@ func TestNormalizeModelName_Comprehensive(t *testing.T) {
 		{"claude-3-0-opus", "claude-3.0-opus"},
 		// Already normalized
 		{"claude-haiku-4.5", "claude-haiku-4.5"},
-		{"claude-sonnet-4.5", "claude-sonnet-4.5"},
+		{"claude-sonnet-4.5", "claude-3-5-sonnet"},
 		{"claude-opus-4.5", "claude-opus-4.5"},
 		{"claude-3.7-sonnet", "claude-3.7-sonnet"},
 		{"auto", "auto"},

@@ -82,6 +82,11 @@ type Config struct {
 	ACPAgent           string
 	ACPMaxIdleSessions int
 
+	// Enterprise / Account / Extended configuration
+	AccountSystem          bool
+	AccountRecoveryTimeout int
+	FakeReasoningBudgetCap int
+
 	// App
 	Version     string
 	Title       string
@@ -119,6 +124,10 @@ func Load() (*Config, error) {
 	cfg.ACPAgent = envStr("ACP_AGENT", "")
 	cfg.ACPMaxIdleSessions = envInt("ACP_MAX_IDLE_SESSIONS", 8)
 
+	cfg.AccountSystem = envBoolDefault("ACCOUNT_SYSTEM", false)
+	cfg.AccountRecoveryTimeout = envInt("ACCOUNT_RECOVERY_TIMEOUT", 60)
+	cfg.FakeReasoningBudgetCap = envInt("FAKE_REASONING_BUDGET_CAP", 0)
+
 	cfg.VPNProxyURL = envStr("VPN_PROXY_URL", "")
 
 	cfg.FirstTokenTimeout = time.Duration(envFloat("FIRST_TOKEN_TIMEOUT", 30)) * time.Second
@@ -142,9 +151,16 @@ func Load() (*Config, error) {
 
 	cfg.HiddenModels = envJSONMap("HIDDEN_MODELS", map[string]string{
 		"claude-3.7-sonnet": "CLAUDE_3_7_SONNET_20250219_V1_0",
+		"claude-3.5-sonnet": "claude-sonnet-4.5",
 	})
 	cfg.ModelAliases = envJSONMap("MODEL_ALIASES", map[string]string{
-		"auto-kiro": "auto",
+		"auto-kiro":          "auto",
+		"claude-sonnet-4-5":  "claude-3-5-sonnet",
+		"claude-sonnet-4.5":  "claude-3-5-sonnet",
+		"claude-4-5-sonnet":  "claude-3-5-sonnet",
+		"claude-4.5-sonnet":  "claude-3-5-sonnet",
+		"claude-opus-4-8":    "claude-3-5-sonnet",
+		"claude-opus-4.8":    "claude-3-5-sonnet",
 	})
 	cfg.HiddenFromList = envCommaSeparated("HIDDEN_FROM_LIST", []string{"auto"})
 	cfg.FallbackModels = defaultFallbackModels()
@@ -373,6 +389,7 @@ func normalizePath(p string) string {
 func defaultFallbackModels() []FallbackModel {
 	return []FallbackModel{
 		{ModelID: "auto"},
+		{ModelID: "claude-3-5-sonnet"},
 		{ModelID: "claude-opus-4-6"},
 		{ModelID: "claude-opus-4-5"},
 		{ModelID: "claude-sonnet-4-6"},

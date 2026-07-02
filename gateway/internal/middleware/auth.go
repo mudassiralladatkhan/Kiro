@@ -20,7 +20,7 @@ type apiKeyRoute struct {
 
 // protectedRoutes maps URL paths to their API key validation rules.
 var protectedRoutes = map[string]apiKeyRoute{
-	"/v1/models":           {acceptXAPIKey: false, useAnthropicError: false},
+	"/v1/models":           {acceptXAPIKey: true, useAnthropicError: false},
 	"/v1/chat/completions": {acceptXAPIKey: false, useAnthropicError: false},
 	"/v1/messages":         {acceptXAPIKey: true, useAnthropicError: true},
 }
@@ -53,7 +53,8 @@ func Auth(proxyAPIKey string) func(http.Handler) http.Handler {
 			}
 
 			if key != proxyAPIKey {
-				writeAuthError(w, route.useAnthropicError)
+				useAnthropic := route.useAnthropicError || r.Header.Get("x-api-key") != "" || r.Header.Get("anthropic-version") != ""
+				writeAuthError(w, useAnthropic)
 				return
 			}
 
