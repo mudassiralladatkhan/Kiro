@@ -61,8 +61,8 @@ func TestNormalizeModelName_UpstreamRewrite(t *testing.T) {
 		{"claude-sonnet-4.5", "claude-3-5-sonnet"},
 		{"claude-4-5-sonnet", "claude-3-5-sonnet"},
 		{"claude-4.5-sonnet", "claude-3-5-sonnet"},
-		{"claude-opus-4-8", "claude-3-5-sonnet"},
-		{"claude-opus-4.8", "claude-3-5-sonnet"},
+		{"claude-opus-4-8", "claude-opus-4.8"},
+		{"claude-opus-4.8", "claude-opus-4.8"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {

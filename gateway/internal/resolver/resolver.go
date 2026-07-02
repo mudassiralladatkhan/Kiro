@@ -164,8 +164,7 @@ func NormalizeModelName(name string) string {
 	// Upstream Backend Rewrite Rule: Normalize requested models to an officially
 	// supported AWS Bedrock identifier: claude-3-5-sonnet.
 	if lower == "claude-sonnet-4-5" || lower == "claude-sonnet-4.5" ||
-		lower == "claude-4-5-sonnet" || lower == "claude-4.5-sonnet" ||
-		lower == "claude-opus-4-8" || lower == "claude-opus-4.8" {
+		lower == "claude-4-5-sonnet" || lower == "claude-4.5-sonnet" {
 		return "claude-3-5-sonnet"
 	}
 
