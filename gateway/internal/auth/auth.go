@@ -307,15 +307,8 @@ func (m *kiroAuthManager) doRefresh(ctx context.Context) error {
 //  3. KIRO_CLI_DB_FILE (SQLite — placeholder, task 3.4)
 func (m *kiroAuthManager) loadCredentials() error {
 	// Priority 0: JSON credentials directly from environment variables.
-	credsJSON := os.Getenv("KIRO_CREDS_JSON")
-	if credsJSON == "" {
-		credsJSON = os.Getenv("CREDS_JSON")
-	}
-	if credsJSON == "" {
-		credsJSON = os.Getenv("creds.json")
-	}
-	if credsJSON != "" {
-		if err := m.loadFromCredsJSON(credsJSON); err != nil {
+	if m.cfg.CredsJSON != "" {
+		if err := m.loadFromCredsJSON(m.cfg.CredsJSON); err != nil {
 			log.Warn().Err(err).Msg("Failed to load credentials from env JSON")
 		} else {
 			log.Info().Msg("Credentials loaded from environment variable JSON")

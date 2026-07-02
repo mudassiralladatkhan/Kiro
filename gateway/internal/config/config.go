@@ -34,6 +34,7 @@ type Config struct {
 	Region       string
 	CredsFile    string
 	CLIDBFile    string
+	CredsJSON    string
 
 	// Proxy
 	VPNProxyURL string
@@ -118,6 +119,14 @@ func Load() (*Config, error) {
 	cfg.Region = envStr("KIRO_REGION", "us-east-1")
 	cfg.CredsFile = normalizePath(envStr("KIRO_CREDS_FILE", ""))
 	cfg.CLIDBFile = normalizePath(envStr("KIRO_CLI_DB_FILE", ""))
+
+	cfg.CredsJSON = envStr("KIRO_CREDS_JSON", "")
+	if cfg.CredsJSON == "" {
+		cfg.CredsJSON = envStr("CREDS_JSON", "")
+	}
+	if cfg.CredsJSON == "" {
+		cfg.CredsJSON = envStr("creds.json", "")
+	}
 
 	cfg.BackendMode = envEnum("BACKEND_MODE", "http", []string{"http", "acp"})
 	cfg.KiroCLIPath = normalizePath(envStr("KIRO_CLI_PATH", ""))
@@ -233,13 +242,15 @@ func validate(cfg *Config) error {
 	hasCredsFile := cfg.CredsFile != ""
 	hasRefreshToken := cfg.RefreshToken != ""
 	hasCLIDB := cfg.CLIDBFile != ""
+	hasCredsJSON := cfg.CredsJSON != ""
 
-	if !hasCredsFile && !hasRefreshToken && !hasCLIDB {
+	if !hasCredsFile && !hasRefreshToken && !hasCLIDB && !hasCredsJSON {
 		return fmt.Errorf(
 			"no credential source configured. Please set at least one of:\n" +
 				"  • KIRO_CREDS_FILE  — path to JSON credentials file from Kiro IDE\n" +
 				"  • REFRESH_TOKEN    — Kiro refresh token\n" +
-				"  • KIRO_CLI_DB_FILE — path to kiro-cli SQLite database\n\n" +
+				"  • KIRO_CLI_DB_FILE — path to kiro-cli SQLite database\n" +
+				"  • KIRO_CREDS_JSON / creds.json — environment variable containing raw JSON credentials\n\n" +
 				"See .env.example for detailed instructions")
 	}
 	return nil
