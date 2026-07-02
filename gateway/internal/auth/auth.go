@@ -301,10 +301,28 @@ func (m *kiroAuthManager) doRefresh(ctx context.Context) error {
 // ---------------------------------------------------------------------------
 
 // loadCredentials loads credentials from the first available source:
+//  0. KIRO_CREDS_JSON / CREDS_JSON / creds.json (env var containing raw JSON string)
 //  1. KIRO_CREDS_FILE (JSON file)
 //  2. REFRESH_TOKEN (env var, already in cfg)
 //  3. KIRO_CLI_DB_FILE (SQLite — placeholder, task 3.4)
 func (m *kiroAuthManager) loadCredentials() error {
+	// Priority 0: JSON credentials directly from environment variables.
+	credsJSON := os.Getenv("KIRO_CREDS_JSON")
+	if credsJSON == "" {
+		credsJSON = os.Getenv("CREDS_JSON")
+	}
+	if credsJSON == "" {
+		credsJSON = os.Getenv("creds.json")
+	}
+	if credsJSON != "" {
+		if err := m.loadFromCredsJSON(credsJSON); err != nil {
+			log.Warn().Err(err).Msg("Failed to load credentials from env JSON")
+		} else {
+			log.Info().Msg("Credentials loaded from environment variable JSON")
+			return nil
+		}
+	}
+
 	// Priority 1: JSON credentials file.
 	if m.cfg.CredsFile != "" {
 		if err := m.loadFromCredsFile(m.cfg.CredsFile); err != nil {
@@ -335,6 +353,55 @@ func (m *kiroAuthManager) loadCredentials() error {
 	}
 
 	return fmt.Errorf("no credential source available")
+}
+
+// loadFromCredsJSON parses a raw JSON credentials string and populates the manager fields.
+func (m *kiroAuthManager) loadFromCredsJSON(jsonStr string) error {
+	var creds credsFileData
+	if err := json.Unmarshal([]byte(jsonStr), &creds); err != nil {
+		return fmt.Errorf("parsing credentials JSON: %w", err)
+	}
+
+	if creds.RefreshToken != "" {
+		m.refreshToken = creds.RefreshToken
+	}
+	if creds.AccessToken != "" {
+		m.accessToken = creds.AccessToken
+	}
+	if creds.ProfileARN != "" {
+		m.profileARN = creds.ProfileARN
+	}
+	if creds.Region != "" {
+		m.apiHost = fmt.Sprintf(kiroAPIHostTemplate, creds.Region)
+		m.qHost = fmt.Sprintf(kiroQHostTemplate, creds.Region)
+		m.ssoRegion = creds.Region
+		log.Info().Str("region", creds.Region).Str("api_host", m.apiHost).Str("q_host", m.qHost).Str("profile_arn", m.profileARN).Msg("Region updated from credentials JSON")
+	}
+
+	// Enterprise Kiro IDE: load device registration from ~/.aws/sso/cache/{clientIdHash}.json
+	if creds.ClientIDHash != "" {
+		m.loadEnterpriseDeviceRegistration(creds.ClientIDHash)
+	}
+
+	// Direct clientId/clientSecret
+	if creds.ClientID != "" {
+		m.clientID = creds.ClientID
+	}
+	if creds.ClientSecret != "" {
+		m.clientSecret = creds.ClientSecret
+	}
+
+	// Parse expiresAt (ISO 8601 / RFC 3339)
+	if creds.ExpiresAt != "" {
+		m.expiresAt = parseTime(creds.ExpiresAt)
+	}
+
+	log.Debug().Str("auth_type", string(m.authType)).Str("region", m.ssoRegion).Str("api_host", m.apiHost).Str("q_host", m.qHost).Str("profile_arn", m.profileARN).
+		Bool("has_refresh_token", m.refreshToken != "").Bool("has_access_token", m.accessToken != "").
+		Bool("has_client_id", m.clientID != "").Bool("has_client_secret", m.clientSecret != "").
+		Str("expires_at", m.expiresAt.Format(time.RFC3339)).Str("fingerprint", m.fingerprint).Msg("Auth state after environment JSON load")
+
+	return nil
 }
 
 // loadFromCredsFile reads a JSON credentials file and populates the manager
