@@ -62,9 +62,9 @@ func run() error {
 
 	log.Info().Str("version", version).Msg("Kiro Gateway starting")
 
-	// 3. Initialize auth manager (skipped in ACP mode).
+	// 3. Initialize auth manager (skipped in ACP and Vercel modes).
 	var authMgr auth.AuthManager
-	if cfg.BackendMode != "acp" {
+	if cfg.BackendMode != "acp" && cfg.BackendMode != "vercel" {
 		authMgr, err = auth.NewAuthManager(cfg)
 		if err != nil {
 			return fmt.Errorf("auth: %w", err)
@@ -130,6 +130,26 @@ func run() error {
 // fallback model list from config, logging enough detail for operators
 // to diagnose the failure.
 func loadModelsAtStartup(cfg *config.Config, authMgr auth.AuthManager, modelCache cache.ModelCache) {
+	if cfg.BackendMode == "vercel" {
+		fallbackIDs := make([]string, 0, len(cfg.FallbackModels))
+		fallback := make([]models.ModelInfo, 0, len(cfg.FallbackModels))
+		for _, fm := range cfg.FallbackModels {
+			fallback = append(fallback, models.ModelInfo{
+				ModelID:        fm.ModelID,
+				MaxInputTokens: cfg.DefaultMaxInputTokens,
+				DisplayName:    fm.ModelID,
+			})
+			fallbackIDs = append(fallbackIDs, fm.ModelID)
+		}
+		modelCache.Update(fallback)
+
+		log.Info().
+			Int("count", len(fallback)).
+			Strs("models", fallbackIDs).
+			Msg("Loaded fallback models for Vercel mode")
+		return
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
