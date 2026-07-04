@@ -91,6 +91,10 @@ type Config struct {
 	AccountRecoveryTimeout int
 	FakeReasoningBudgetCap int
 
+	// Vercel AI Gateway
+	VercelAPIKey string
+	VercelURL    string
+
 	// App
 	Version     string
 	Title       string
@@ -131,10 +135,13 @@ func Load() (*Config, error) {
 		cfg.CredsJSON = envStr("creds.json", "")
 	}
 
-	cfg.BackendMode = envEnum("BACKEND_MODE", "http", []string{"http", "acp"})
+	cfg.BackendMode = envEnum("BACKEND_MODE", "http", []string{"http", "acp", "vercel"})
 	cfg.KiroCLIPath = normalizePath(envStr("KIRO_CLI_PATH", ""))
 	cfg.ACPAgent = envStr("ACP_AGENT", "")
 	cfg.ACPMaxIdleSessions = envInt("ACP_MAX_IDLE_SESSIONS", 8)
+
+	cfg.VercelAPIKey = envStr("VERCEL_API_KEY", "")
+	cfg.VercelURL = envStr("VERCEL_URL", "")
 
 	cfg.AccountSystem = envBoolDefault("ACCOUNT_SYSTEM", false)
 	cfg.AccountRecoveryTimeout = envInt("ACCOUNT_RECOVERY_TIMEOUT", 60)
@@ -142,7 +149,7 @@ func Load() (*Config, error) {
 
 	cfg.VPNProxyURL = envStr("VPN_PROXY_URL", "")
 
-	cfg.FirstTokenTimeout = time.Duration(envFloat("FIRST_TOKEN_TIMEOUT", 300)) * time.Second
+	cfg.FirstTokenTimeout = time.Duration(envFloat("FIRST_TOKEN_TIMEOUT", 0)) * time.Second
 	cfg.FirstTokenMaxRetries = envInt("FIRST_TOKEN_MAX_RETRIES", 3)
 	cfg.StreamingReadTimeout = time.Duration(envFloat("STREAMING_READ_TIMEOUT", 600)) * time.Second
 
@@ -244,7 +251,7 @@ func applyCLIFlags(cfg *Config) {
 // validate checks that the configuration has at least one credential source.
 // In ACP mode, credential fields are optional since the CLI manages auth.
 func validate(cfg *Config) error {
-	if cfg.BackendMode == "acp" {
+	if cfg.BackendMode == "acp" || cfg.BackendMode == "vercel" {
 		return nil
 	}
 

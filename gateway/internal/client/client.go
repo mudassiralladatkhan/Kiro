@@ -51,7 +51,7 @@ type KiroClient interface {
 // non-streaming requests. The shared client uses connection pooling via
 // http.Transport for efficiency.
 func NewKiroClient(authMgr auth.AuthManager, cfg *config.Config) KiroClient {
-	transport := buildTransport(cfg)
+	transport := BuildTransport(cfg)
 
 	sharedClient := &http.Client{
 		Transport: transport,
@@ -211,7 +211,7 @@ func (c *kiroHTTPClient) clientForRequest(stream bool) *http.Client {
 
 	// Per-request client for streaming — disable keep-alives so the
 	// connection is closed when the response body is drained.
-	transport := buildTransport(c.config)
+	transport := BuildTransport(c.config)
 	transport.DisableKeepAlives = true
 
 	return &http.Client{
@@ -225,9 +225,9 @@ func (c *kiroHTTPClient) clientForRequest(stream bool) *http.Client {
 // Transport construction (proxy support)
 // ---------------------------------------------------------------------------
 
-// buildTransport creates an *http.Transport with connection pooling and
+// BuildTransport creates an *http.Transport with connection pooling and
 // optional proxy routing based on VPN_PROXY_URL configuration.
-func buildTransport(cfg *config.Config) *http.Transport {
+func BuildTransport(cfg *config.Config) *http.Transport {
 	transport := &http.Transport{
 		MaxIdleConns:        100,
 		MaxIdleConnsPerHost: 10,

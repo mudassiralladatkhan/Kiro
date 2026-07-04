@@ -87,6 +87,11 @@ func (s *Server) handleMessages(w http.ResponseWriter, r *http.Request) {
 		Str("source", resolution.Source).
 		Msg("Resolved model name for Kiro")
 
+	if s.config.BackendMode == "vercel" {
+		s.handleVercelMessages(w, r, req, modelID, start)
+		return
+	}
+
 	// Truncation recovery: check for truncated tool results and content.
 	if s.config.TruncationRecovery {
 		req.Messages = s.applyAnthropicTruncationRecovery(req.Messages)

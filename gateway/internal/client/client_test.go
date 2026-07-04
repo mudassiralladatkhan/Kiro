@@ -535,7 +535,7 @@ func TestBuildTransport_NoProxy(t *testing.T) {
 	cfg := testConfig()
 	cfg.VPNProxyURL = ""
 
-	transport := buildTransport(cfg)
+	transport := BuildTransport(cfg)
 	if transport.Proxy != nil {
 		t.Error("expected no proxy function when VPN_PROXY_URL is empty")
 	}
@@ -545,7 +545,7 @@ func TestBuildTransport_WithProxy(t *testing.T) {
 	cfg := testConfig()
 	cfg.VPNProxyURL = "http://proxy.example.com:8080"
 
-	transport := buildTransport(cfg)
+	transport := BuildTransport(cfg)
 	if transport.Proxy == nil {
 		t.Fatal("expected proxy function when VPN_PROXY_URL is set")
 	}
@@ -568,7 +568,7 @@ func TestBuildTransport_ProxyExcludesLocalhost(t *testing.T) {
 	cfg := testConfig()
 	cfg.VPNProxyURL = "http://proxy.example.com:8080"
 
-	transport := buildTransport(cfg)
+	transport := BuildTransport(cfg)
 
 	localhostURLs := []string{
 		"http://localhost:8000/test",
@@ -592,7 +592,7 @@ func TestBuildTransport_ProxyWithoutScheme(t *testing.T) {
 	cfg := testConfig()
 	cfg.VPNProxyURL = "192.168.1.100:8080"
 
-	transport := buildTransport(cfg)
+	transport := BuildTransport(cfg)
 	if transport.Proxy == nil {
 		t.Fatal("expected proxy function for URL without scheme")
 	}
