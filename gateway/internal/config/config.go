@@ -140,8 +140,8 @@ func Load() (*Config, error) {
 	cfg.ACPAgent = envStr("ACP_AGENT", "")
 	cfg.ACPMaxIdleSessions = envInt("ACP_MAX_IDLE_SESSIONS", 8)
 
-	cfg.VercelAPIKey = envStr("VERCEL_API_KEY", "")
-	cfg.VercelURL = envStr("VERCEL_URL", "")
+	cfg.VercelAPIKey = strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(envStr("VERCEL_API_KEY", ""), "\n", ""), "\r", ""))
+	cfg.VercelURL = strings.TrimSpace(envStr("VERCEL_URL", ""))
 
 	cfg.AccountSystem = envBoolDefault("ACCOUNT_SYSTEM", false)
 	cfg.AccountRecoveryTimeout = envInt("ACCOUNT_RECOVERY_TIMEOUT", 60)
@@ -186,6 +186,8 @@ func Load() (*Config, error) {
 		"claude-3-5-sonnet-20241022": "claude-3-5-sonnet",
 		"claude-3-5-sonnet-20240620": "claude-3-5-sonnet",
 		"claude-3-5-sonnet":          "claude-3-5-sonnet",
+		"fable-5":                    "anthropic/claude-fable-5",
+		"claude-fable-5":             "anthropic/claude-fable-5",
 	})
 	cfg.HiddenFromList = envCommaSeparated("HIDDEN_FROM_LIST", []string{"auto"})
 	cfg.FallbackModels = defaultFallbackModels()
