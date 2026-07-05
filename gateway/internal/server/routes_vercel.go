@@ -133,9 +133,22 @@ func (s *Server) handleVercelMessages(
 	}
 
 	apiKey := s.config.VercelAPIKey
+	
+	// Diagnostic logs
+	keyPreview := ""
+	if len(apiKey) > 8 {
+		keyPreview = apiKey[:8] + "..."
+	} else {
+		keyPreview = apiKey
+	}
+	log.Info().
+		Str("vercel_url", vercelURL).
+		Str("api_key_preview", keyPreview).
+		Int("api_key_length", len(apiKey)).
+		Msg("Vercel diagnostic check")
+
 	if apiKey != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+apiKey)
-		httpReq.Header.Set("x-api-key", apiKey)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
