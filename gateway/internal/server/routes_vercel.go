@@ -112,7 +112,10 @@ func (s *Server) handleVercelMessages(
 		return
 	}
 
-	vercelURL := s.config.VercelURL
+	vercelURL := r.Header.Get("X-Test-Vercel-URL")
+	if vercelURL == "" {
+		vercelURL = s.config.VercelURL
+	}
 	if vercelURL == "" {
 		vercelURL = "https://ai-gateway.vercel.sh/v1/chat/completions"
 	} else if !strings.HasSuffix(vercelURL, "/chat/completions") {
